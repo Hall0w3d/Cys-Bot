@@ -288,6 +288,7 @@ class Tickets(commands.Cog):
         self.bot.tree.add_command(self.db, guild=guild)
         self.bot.tree.add_command(self.ticketsetup, guild=guild)
         self.bot.tree.add_command(self.clear, guild=guild)
+        self.bot.tree.add_command(self.staffsetup, guild=guild)
 
 
 async def setup(bot):
