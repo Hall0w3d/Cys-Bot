@@ -1,4 +1,4 @@
- # Updates will show here (U.S format)
+ # Updates will show up here (U.S format)
 
 ## 6/17/25
 - Added staff-setup command
