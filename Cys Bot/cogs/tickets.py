@@ -30,7 +30,7 @@ class Tickets(commands.Cog):
         con.close()
 
         guild = interaction.guild
-        role = discord.utils.get(interaction.guild.roles, name="Staff")
+        role = discord.utils.get(interaction.guild.roles, name="Ticket Support")
         channel_name = f"ticket-{interaction.user.name}"
         category = discord.utils.get(guild.categories, id=1345501998727823530)
 
@@ -174,32 +174,70 @@ class Tickets(commands.Cog):
         rows = cur.fetchall()
         con.close()
 
-        ranks = sorted(rows, key=lambda row: row[1] + row[2], reverse=True)[:10]
+        ranks = sorted(rows, key=lambda row: row[1] + row[2], reverse=True)
 
         text = ""
+        pages = []
+        page_size = 10
 
         if role:
-            rank = 0
+            filtered = []
             for user_id, claimed, closed in rows:
                 member = interaction.guild.get_member(int(user_id))
                 if member and role in member.roles:
-                    total = claimed + closed
-                    rank += 1
-                    text += f"**{rank}.** {member.mention} — Claims: {claimed}, Closes: {closed} (Total: {total})\n"
+                    filtered.append((member, claimed, closed))
+            data = sorted(filtered, key=lambda row: row[1] + row[2], reverse=True)
+            title = f"📊 Top ({role.name})"
+        else:
+            data = sorted(rows, key=lambda row: row[1] + row[2], reverse=True)
+            title = "📊 Top Support Staff"
 
-        else: 
-            for rank, (user_id, claimed, closed) in enumerate(ranks, start=1):
-                user = await interaction.client.fetch_user(int(user_id))
-                total = claimed + closed
-                text += f"**{rank}.** {user.mention} — Claims: {claimed}, Closes: {closed} (Total: {total})\n"
+        
 
         if role:
-            title = f"📊 Top 10 {role}"
+            chunks = [data[i:i + page_size] for i in range(0, len(data), page_size)]
+            for chunk in chunks:
+                desc = ""
+                for r, (member, claimed, closed) in enumerate(chunk, start=1):
+                    total = claimed + closed
+                    desc += f"**{r}.** {member.mention} — Claims: {claimed}, Closes: {closed} (Total: {total})\n"
+                embed = discord.Embed(title=title, description=desc or "No data", color=discord.Color.purple())
+                pages.append(embed)
         else:
-            title = "📊 Top 10 Support Staff"
+            chunks = [data[i:i + page_size] for i in range(0, len(data), page_size)]
+            for chunk in chunks:
+                desc = ""
+                for r, (user_id, claimed, closed) in enumerate(chunk, start=1):
+                    user = await interaction.client.fetch_user(int(user_id))
+                    total = claimed + closed
+                    desc += f"**{r}.** {user.mention} — Claims: {claimed}, Closes: {closed} (Total: {total})\n"
+                embed = discord.Embed(title=title, description=desc or "No data", color=discord.Color.purple())
+                pages.append(embed)
 
-        embed = discord.Embed(title=title, description=text, color=discord.Color.purple())
-        await interaction.response.send_message(embed=embed)
+        if not pages:
+            await interaction.response.send_message("❌ No matching data found.", ephemeral=True)
+            return    
+
+        class Paginator(discord.ui.View):
+            def __init__(self):
+                super().__init__(timeout=None)
+                self.page = 0
+                self.msg = None
+
+            @discord.ui.button(label="◀️ Prev", style=discord.ButtonStyle.gray)
+            async def prev(self, interaction2: discord.Interaction, button: discord.Button):
+                if self.page > 0:
+                    self.page -= 1
+                    await interaction2.response.edit_message(embed=pages[self.page], view=self)
+
+            @discord.ui.button(label="▶️ Next", style=discord.ButtonStyle.gray)
+            async def next(self, interaction2: discord.Interaction, button: discord.Button):
+                if self.page < len(pages) - 1:
+                    self.page += 1
+                    await interaction2.response.edit_message(embed=pages[self.page], view=self)
+
+        view = Paginator()
+        await interaction.response.send_message(embed=pages[0], view=view)
 
     @app_commands.command(name="clear-stats", description="clears all of the stats")
     async def clear(self, interaction: discord.Interaction):

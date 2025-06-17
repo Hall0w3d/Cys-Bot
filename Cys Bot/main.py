@@ -27,12 +27,12 @@ async def shutdown(ctx):
 async def on_ready():
     try:
         print(f"Bot active as {bot.user}")
-        bot.tree.clear_commands(guild=discord.Object(id=925266727200235540))
+        bot.tree.clear_commands(guild=discord.Object(id=1338965034616881263))
         await load_cogs()
-        await bot.tree.sync(guild=discord.Object(id=925266727200235540))
+        await bot.tree.sync(guild=discord.Object(id=1338965034616881263))
         print("Loaded all cogs")
         print("Registered commands:")
-        for cmd in bot.tree.get_commands(guild=discord.Object(id=925266727200235540)):
+        for cmd in bot.tree.get_commands(guild=discord.Object(id=1338965034616881263)):
             print(f"- {cmd.name}")
     except Exception as e:
         print(f"❌ Error in on_ready: {e}")
