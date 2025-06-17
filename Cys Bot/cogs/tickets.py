@@ -150,16 +150,16 @@ class Tickets(commands.Cog):
         con = sqlite3.connect("stats.db")
         cur = con.cursor()
 
-        cur.execute("SELECT claimed FROM stats WHERE id = ?", (interaction.user.id,))
+        cur.execute("SELECT claimed FROM stats WHERE id = ?", (user.id,))
         claimed = cur.fetchone()[0]
 
-        cur.execute("SELECT closed FROM stats WHERE id = ?", (interaction.user.id,))
+        cur.execute("SELECT closed FROM stats WHERE id = ?", (user.id,))
         closed = cur.fetchone()[0]
 
-        embed = discord.Embed(title=f"{interaction.user.name}'s Stats", color=discord.Color.blue())
+        embed = discord.Embed(title=f"{user.name}'s Stats", color=discord.Color.blue())
         embed.add_field(name=f"", value=f"**Claims**: {claimed}")
         embed.add_field(name=f"", value=f"**Closes**: {closed}")
-        embed.set_image(url=interaction.user.display_avatar.url)
+        embed.set_image(url=user.display_avatar.url)
 
         await interaction.response.send_message(embed=embed)
 
@@ -258,6 +258,29 @@ class Tickets(commands.Cog):
         con.close()
 
         await interaction.response.send_message("Cleared DB ⚙️", ephemeral=True)
+
+    @app_commands.command(name="staff-setup", description="Sets-up all people of a specific role to the DB")
+    async def staffsetup(self, interaction:discord.Interaction, role: discord.Role):
+        if not interaction.user.guild_permissions.administrator:
+            await interaction.response.send_message("You do not have permission to use this command :x:", ephemeral=True)
+            return
+        
+        con = sqlite3.connect("stats.db")
+        cur = con.cursor()
+
+        people = 0
+        for member in interaction.guild.members:
+            if member and role in member.roles:
+                cur.execute("SELECT * FROM stats WHERE id = ?", (member.id,))
+                result = cur.fetchone()
+                if result is None:
+                    cur.execute("INSERT INTO stats (id, claimed, closed) VALUES (?, ?, ?)", (member.id, 0, 0))
+                    people += 1
+                con.commit()
+        con.close()
+
+        await interaction.response.send_message(f"**{people}** people have been added to stats", ephemeral=True)
+
 
     async def cog_load(self):
         guild = discord.Object(id=1338965034616881263)
